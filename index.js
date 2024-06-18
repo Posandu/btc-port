@@ -4,8 +4,10 @@ const DAILY_BUY_AMOUNT = 1.75;
 
 let prices = [];
 let avgPrices = [];
+let investment = [];
 let cummAccumilatedBTC = [];
 let cummAccumilatedUSD = [];
+let dailyReward = [];
 
 let totalInvestedUSD = 0;
 let totalInvestedBTC = 0;
@@ -29,21 +31,27 @@ const makeData = async () => {
 
 		const movement = (priceAtDay / priceAtDayBefore - 1) * 100;
 
-		let buying = DAILY_BUY_AMOUNT / priceAtDay;
+		let buyUSD = DAILY_BUY_AMOUNT;
+
+		if (movement < 0) buyUSD = movement * -1 * DAILY_BUY_AMOUNT;
+
+		let buying = buyUSD / priceAtDay;
 
 		console.log(movement, buying);
 
 		if (i === 0) {
 			cummAccumilatedBTC.push(buying);
-			cummAccumilatedUSD.push(DAILY_BUY_AMOUNT);
+			cummAccumilatedUSD.push(buyUSD);
 		} else {
 			cummAccumilatedBTC.push(cummAccumilatedBTC[i - 1] + buying);
-			cummAccumilatedUSD.push(cummAccumilatedUSD[i - 1] + DAILY_BUY_AMOUNT);
+			cummAccumilatedUSD.push(cummAccumilatedUSD[i - 1] + buyUSD);
 		}
 
 		const avgPrice = cummAccumilatedUSD[i] / cummAccumilatedBTC[i];
 
 		avgPrices.push(avgPrice);
+		investment.push(buyUSD);
+		dailyReward.push(1 + Math.random());
 	}
 };
 
@@ -78,6 +86,22 @@ const drawChart = async () => {
 					fill: true,
 					yAxisID: "y-axis-2",
 				},
+				{
+					label: "Investment",
+					type: "bar",
+					data: investment,
+					fill: true,
+					yAxisID: "y-axis-3",
+				},
+				{
+					label: "Daily Reward",
+					type: "bar",
+					data: dailyReward,
+					borderColor: "rgba(255, 206, 86, 1)",
+					backgroundColor: "rgba(21, 206, 86, 0.2)",
+					fill: true,
+					yAxisID: "y-axis-3",
+				},
 			],
 		},
 		options: {
@@ -95,8 +119,12 @@ const drawChart = async () => {
 };
 
 const calculateROI = async () => {
-	totalInvestedUSD = DAILY_BUY_AMOUNT * prices.length;
+	totalInvestedUSD = cummAccumilatedUSD.at(-1);
 	totalInvestedBTC = cummAccumilatedBTC.at(-1);
+
+	const totalReward = dailyReward.reduce((acc, reward) => acc + reward, 0);
+
+	totalInvestedUSD -= totalReward;
 
 	ROI =
 		(totalInvestedBTC * prices[prices.length - 1] - totalInvestedUSD) /
@@ -122,14 +150,7 @@ const calculateROI = async () => {
 		(totalInvestedBTC * prices.at(-1)).toFixed(2) +
 		" USD)";
 	document.getElementById("investment-roi").innerText =
-		"ROI: " +
-		ROI.toFixed(2) +
-		"%" +
-		(ROI > 0 ? " 🚀" : " 💩") +
-		"\n" +
-		((totalInvestedBTC * prices.at(-1)).toFixed(2) - totalInvestedUSD).toFixed(
-			2
-		);
+		"ROI: " + ROI.toFixed(2) + "%";
 };
 
 const main = async () => {
